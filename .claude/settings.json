@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__freecad__*",
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1)",
+      "Bash(bash setup/check.sh)"
+    ]
+  }
+}

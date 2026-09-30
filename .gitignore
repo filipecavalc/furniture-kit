@@ -1,0 +1,24 @@
+# per-user files (stay on this computer)
+config/local.json
+CLAUDE.local.md
+.claude/settings.local.json
+
+# user projects
+projects/*
+!projects/.gitkeep
+
+# downloads made during setup
+setup/downloads/
+
+# generated / heavy files
+__pycache__/
+*.pyc
+*.FCStd
+*.FCBak
+*.FCStd1
+*.blend
+*.blend1
+*.mp4
+examples/*/model/*.glb
+examples/*/model/*.materials.json
+examples/*/model/*.assembly.json
