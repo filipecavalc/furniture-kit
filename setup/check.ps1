@@ -9,7 +9,10 @@ $TestedFreeCAD = "1.1.3"; $TestedBlender = "5.1.2"
 
 function Line($status, $item, $detail) { Write-Output ("[{0}] {1}: {2}" -f $status, $item, $detail) }
 
-Write-Output "furniture-kit environment check (Windows)"
+$Version = "?"
+$init = Get-Content (Join-Path $Kit "scripts\furniture\__init__.py") -Raw
+if ($init -match '__version__ = "([^"]+)"') { $Version = $Matches[1] }
+Write-Output "furniture-kit $Version environment check (Windows)"
 Write-Output ("OS: " + [System.Environment]::OSVersion.VersionString)
 if ($env:CLAUDE_CODE_ENTRYPOINT) { Write-Output ("Claude entrypoint: " + $env:CLAUDE_CODE_ENTRYPOINT) }
 if ($env:CLAUDE_CODE_ENTRYPOINT -eq "claude-desktop") {
@@ -41,7 +44,10 @@ if ($fc) {
     if (-not $fcVer -and $fc -match "FreeCAD (\d+\.\d+)") { $fcVer = $Matches[1] }
     $note = ""
     if ($fcVer -and $fcVer -ne $TestedFreeCAD) { $note = " (kit tested with $TestedFreeCAD)" }
-    Line "OK" "FreeCAD" ("$fcVer - $fc" + $note)
+    if ($fcVer -and ([version](($fcVer.Split(".")[0..1]) -join ".") -lt [version]"1.0")) {
+        Line "OLD" "FreeCAD" "$fcVer - $fc : the kit needs FreeCAD 1.0 or newer. Download: https://www.freecad.org/downloads.php"
+        $Missing.Add("FreeCAD 1.x")
+    } else { Line "OK" "FreeCAD" ("$fcVer - $fc" + $note) }
 } else {
     Line "MISSING" "FreeCAD" "not found. Download: https://www.freecad.org/downloads.php"
     $Missing.Add("FreeCAD")
@@ -112,7 +118,9 @@ if (-not $bl) {
 if ($bl) {
     $blVer = ""; if ((& $bl --version 2>&1 | Out-String) -match "Blender (\d+\.\d+(\.\d+)?)") { $blVer = $Matches[1] }
     $note = ""; if ($blVer -and $blVer -ne $TestedBlender) { $note = " (kit tested with $TestedBlender)" }
-    Line "OK" "Blender" ("$blVer - $bl" + $note)
+    if ($blVer -and ([version]($blVer.Split(".")[0..1] -join ".") -lt [version]"4.2")) {
+        Line "OLD" "Blender" "$blVer - $bl : renders need Blender 4.2 or newer. Download: https://www.blender.org/download/"
+    } else { Line "OK" "Blender" ("$blVer - $bl" + $note) }
 } else {
     Line "OPTIONAL" "Blender" "not found (only needed for renders). Download: https://www.blender.org/download/"
 }

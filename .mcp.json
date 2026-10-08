@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "freecad": {
+      "type": "stdio",
       "command": "uvx",
       "args": ["--system-certs", "freecad-mcp"]
     }

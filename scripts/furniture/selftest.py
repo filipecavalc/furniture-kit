@@ -7,6 +7,7 @@ Run inside FreeCAD (MCP execute_code), with KIT = the repository root:
 
 Copies examples/* to projects/_selftest/<Name> (the examples themselves are never touched), runs
 build() and deliverables() for each, plus the lumber plan, the assembly guide and a pt-BR cut list.
+Everything runs in English except the pt-BR step, whatever config/local.json says.
 Each step is timed; an error is recorded with its traceback and the next step still runs.
 """
 import os, sys, json, time, shutil, platform, traceback
@@ -19,7 +20,8 @@ def _env():
     import FreeCAD as App
     from PySide import QtGui, QtCore
     from .i18n import font
-    info = dict(os=platform.platform(), machine=platform.machine(), python=sys.version.split()[0],
+    from . import __version__
+    info = dict(kit_version=__version__, os=platform.platform(), machine=platform.machine(), python=sys.version.split()[0],
                 freecad=".".join(App.Version()[:3]), freecad_build=App.Version()[3] if len(App.Version()) > 3 else "",
                 qt=QtCore.qVersion(), user_dir=App.getUserAppDataDir(), resource_dir=App.getResourceDir(), kit=ROOT)
     try:
@@ -63,6 +65,18 @@ def run(examples=("Drawer_Cabinet", "Industrial_Table")):
     os.makedirs(OUT, exist_ok=True)
     results, env = [], _env()
     ns = {}
+    i18n.set_language("en")          # same results on every machine, whatever config/local.json says
+    try:
+        _run_steps(examples, results, ns, project, lumber, guide, cutlist, i18n)
+    finally:
+        i18n.set_language(None)
+    for name in examples:
+        if name in App.listDocuments():
+            App.closeDocument(name)
+    return _report(results, env)
+
+
+def _run_steps(examples, results, ns, project, lumber, guide, cutlist, i18n):
     for name in examples:
         src = os.path.join(ROOT, "examples", name)
         dst = os.path.join(OUT, name)
@@ -89,11 +103,11 @@ def run(examples=("Drawer_Cabinet", "Industrial_Table")):
             try:
                 return cutlist.generate(pj(), os.path.join(folder, "cutlist_pt-BR"))
             finally:
-                i18n.set_language(None)
+                i18n.set_language("en")
         _step(results, "cut list in pt-BR", pt_br)
-    for name in examples:
-        if name in App.listDocuments():
-            App.closeDocument(name)
+
+
+def _report(results, env):
     ok = sum(r["ok"] for r in results)
     report = dict(env=env, passed=ok, failed=len(results) - ok, steps=results, files=_files(OUT))
     with open(os.path.join(OUT, "selftest.json"), "w", encoding="utf-8") as f:

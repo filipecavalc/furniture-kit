@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Environment check for furniture-kit (macOS and Linux). Read-only: it never installs or changes anything.
 # Usage: bash setup/check.sh
-# Not yet tested on real macOS/Linux machines: report problems in the repository issues.
+# Tested on macOS (Apple Silicon); Linux untested: report problems in the repository issues.
 
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
+VERSION="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$KIT/scripts/furniture/__init__.py" 2>/dev/null)"
 MISSING=""
 TESTED_FREECAD="1.1.3"; TESTED_BLENDER="5.1.2"
 OS="$(uname -s)"
@@ -18,7 +19,7 @@ case "$OS" in
   MINGW*|MSYS*|CYGWIN*) echo "Windows detected: run  powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1"; exit 0 ;;
   *) PLATFORM="$OS" ;;
 esac
-echo "furniture-kit environment check ($PLATFORM)"
+echo "furniture-kit ${VERSION:-?} environment check ($PLATFORM)"
 echo "OS: $(uname -sr)"
 [ -n "$CLAUDE_CODE_ENTRYPOINT" ] && echo "Claude entrypoint: $CLAUDE_CODE_ENTRYPOINT"
 echo
@@ -33,9 +34,9 @@ if [ "$PLATFORM" = "macOS" ]; then
   fi
 else
   for c in freecad FreeCAD; do command -v "$c" >/dev/null 2>&1 && { FC="$(command -v "$c")"; break; }; done
-  for c in freecadcmd FreeCADCmd; do command -v "$c" >/dev/null 2>&1 && { FCCMD="$(command -v "$c")"; break; }; done
+  for c in freecadcmd FreeCADCmd freecad.cmd; do command -v "$c" >/dev/null 2>&1 && { FCCMD="$(command -v "$c")"; break; }; done
   if [ -z "$FC" ] && command -v flatpak >/dev/null 2>&1 && flatpak info org.freecad.FreeCAD >/dev/null 2>&1; then
-    FC="flatpak org.freecad.FreeCAD"; FCKIND="flatpak"
+    FC="flatpak run org.freecad.FreeCAD"; FCKIND="flatpak"
   fi
   if [ -z "$FC" ]; then
     AI="$(ls -1 "$HOME"/Applications/FreeCAD*.AppImage "$HOME"/Downloads/FreeCAD*.AppImage 2>/dev/null | sort -r | head -n1)"
@@ -46,7 +47,9 @@ fi
 FCVER=""
 if [ -n "$FCCMD" ]; then FCVER="$("$FCCMD" --version 2>/dev/null | sed -n 's/.*FreeCAD \([0-9][0-9.]*\).*/\1/p' | head -n1)"; fi
 if [ -z "$FCVER" ] && [ "$FCKIND" = "flatpak" ]; then FCVER="$(flatpak info org.freecad.FreeCAD 2>/dev/null | sed -n 's/^ *Version: *//p' | head -n1)"; fi
-if [ -n "$FC" ]; then
+if [ -n "$FC" ] && [ -n "$FCVER" ] && [ "$(echo "$FCVER" | cut -d. -f1)" -lt 1 ] 2>/dev/null; then
+  line OLD FreeCAD "$FCVER - $FC: the kit needs FreeCAD 1.0 or newer. Download: https://www.freecad.org/downloads.php"; missing "FreeCAD 1.x"
+elif [ -n "$FC" ]; then
   NOTE=""; [ -n "$FCVER" ] && [ "$FCVER" != "$TESTED_FREECAD" ] && NOTE=" (kit tested with $TESTED_FREECAD)"
   line OK FreeCAD "${FCVER:-version unknown} - $FC$NOTE"
 else
@@ -60,7 +63,8 @@ if [ "$PLATFORM" = "macOS" ]; then
   USERDIR="$(first_existing "$HOME/Library/Application Support/FreeCAD/$VDIR" "$HOME/Library/Application Support/FreeCAD")"
 else
   USERDIR="$(first_existing "$HOME/.var/app/org.freecad.FreeCAD/data/FreeCAD/$VDIR" "$HOME/.local/share/FreeCAD/$VDIR" \
-             "$HOME/snap/freecad/common" "$HOME/.local/share/FreeCAD" "$HOME/.FreeCAD")"
+             "$HOME/snap/freecad/current/.local/share/FreeCAD/$VDIR" "$HOME/snap/freecad/common" \
+             "$HOME/.local/share/FreeCAD" "$HOME/.FreeCAD")"
 fi
 if [ -n "$USERDIR" ]; then
   echo "FreeCAD user folder: $USERDIR"
@@ -100,7 +104,12 @@ if [ -z "$BL" ] && command -v flatpak >/dev/null 2>&1 && flatpak info org.blende
 if [ -n "$BL" ]; then
   BLVER="$($BL --version 2>/dev/null | sed -n 's/^Blender \([0-9][0-9.]*\).*/\1/p' | head -n1)"
   NOTE=""; [ -n "$BLVER" ] && [ "$BLVER" != "$TESTED_BLENDER" ] && NOTE=" (kit tested with $TESTED_BLENDER)"
-  line OK Blender "${BLVER:-version unknown} - $BL$NOTE"
+  BLMAJ="$(echo "$BLVER" | cut -d. -f1)"; BLMIN="$(echo "$BLVER" | cut -d. -f2)"
+  if [ -n "$BLVER" ] && { [ "$BLMAJ" -lt 4 ] || { [ "$BLMAJ" -eq 4 ] && [ "$BLMIN" -lt 2 ]; }; } 2>/dev/null; then
+    line OLD Blender "$BLVER - $BL: renders need Blender 4.2 or newer. Download: https://www.blender.org/download/"
+  else
+    line OK Blender "${BLVER:-version unknown} - $BL$NOTE"
+  fi
 else
   line OPTIONAL Blender "not found (only needed for renders). Download: https://www.blender.org/download/"
 fi

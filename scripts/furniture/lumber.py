@@ -16,7 +16,7 @@ Stock sizes are local (ask the user or research the lumber yard); mark unconfirm
 import os, re
 from collections import OrderedDict
 from . import bom
-from .i18n import T, font
+from .i18n import T, font, fit_font
 
 COLORS = ("#cfe3f7", "#d8efd3", "#fbe3c4", "#e6d9f2", "#f9d5d5", "#d4efef", "#f3eec7", "#e2e2e2")
 
@@ -88,7 +88,7 @@ def pdf(plan_, path, title):
 
     def page(p, W, H, sub, body):
         p.fillRect(0, 0, W, H, QtGui.QColor("white")); m = W * 0.035
-        p.setPen(QtGui.QColor("#222")); p.setFont(font(H * 0.034, True))
+        p.setPen(QtGui.QColor("#222")); p.setFont(fit_font(sub, (W - 2 * m) * 0.8, H * 0.034, True))
         p.drawText(QtCore.QRectF(m, m * 0.5, W - 2 * m, H * 0.06), QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, sub)
         p.setFont(font(H * 0.02))
         p.drawText(QtCore.QRectF(m, m * 0.5, W - 2 * m, H * 0.06), QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter, title)
@@ -123,10 +123,11 @@ def pdf(plan_, path, title):
             rows = [T("lumber_parts")]
             for lg in plan_["legend"][start:end]:
                 rows.append((color_of[lg["code"]], lg["code"], lg["name"], lg["mods"], lg["qty"],
-                             f"{lg['length']} x {lg['width']} x {lg['thk']:g}", f"W {lg['rip']} / L {lg['cut']}", lg["note"]))
+                             f"{lg['length']} x {lg['width']} x {lg['thk']:g}", T("rip_cut", w=lg["rip"], l=lg["cut"]), lg["note"]))
             y = table(p, (0.025, 0.04, 0.17, 0.09, 0.04, 0.12, 0.11, 0.405), rows, R, y, lh * 0.82, fs * 0.8)
-            p.setFont(font(fs * 0.85)); p.setPen(QtGui.QColor("#333"))
+            p.setPen(QtGui.QColor("#333"))
             for t in (T("lumber_note1", k=plan_["kerf"], s=plan_["trim"]), T("lumber_note2")):
+                p.setFont(fit_font(t, R.width(), fs * 0.85))
                 p.drawText(QtCore.QRectF(R.left(), y + lh * 0.2, R.width(), lh), QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, t); y += lh * 0.8
         return _b
 

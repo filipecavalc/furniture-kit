@@ -47,8 +47,11 @@ def page(proj, name, label, texts, template="A3_Landscape_ISO5457_minimal.svg"):
 def view(pg, name, sources, direction, x, y, scale, xdir=None):
     doc = pg.Document
     v = doc.addObject("TechDraw::DrawViewPart", name); pg.addView(v)
-    v.Source = sources; v.Direction = App.Vector(*direction)
-    if xdir: v.XDirection = App.Vector(*xdir)
+    d = App.Vector(*direction)
+    v.Source = sources; v.Direction = d
+    if xdir is None and abs(d.normalize().z) < 0.999:
+        xdir = App.Vector(0, 0, 1).cross(d)          # keeps Z vertical on the paper (also in perspective views)
+    if xdir is not None: v.XDirection = App.Vector(*xdir)
     v.ScaleType = "Custom"; v.Scale = scale; v.X, v.Y = x, y
     return v
 

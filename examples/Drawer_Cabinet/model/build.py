@@ -92,7 +92,7 @@ def _sheet_assembly(pj, folder):
     # front
     drawing.dim(pg, vF, (X(0), Z(H + tt)), (X(W), Z(H + tt)), "DistanceX", 0, 58)
     drawing.dim(pg, vF, (X(0), Z(0)), (X(0), Z(H + tt)), "DistanceY", -52, 0)
-    drawing.dim(pg, vF, (X(W), Z(H)), (X(W), Z(H + tt)), "DistanceY", 64, 45)
+    drawing.dim(pg, vF, (X(W), Z(H)), (X(W), Z(H + tt)), "DistanceY", 64, 53)        # label above: 25 mm is too short to hold it
     drawing.dim(pg, vF, (X(W - eg), Z(pl)), (X(W - eg), Z(pl + hf)), "DistanceY", 52, -16)
     drawing.dim(pg, vF, (X(W - eg), Z(pl + hf + fg)), (X(W - eg), Z(pl + 2 * hf + fg)), "DistanceY", 52, 23)
     drawing.dim(pg, vF, (X(W), Z(0)), (X(W - eg), Z(pl)), "DistanceY", 52, -40)

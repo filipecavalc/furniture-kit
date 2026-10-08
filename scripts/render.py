@@ -16,6 +16,14 @@ ap.add_argument("--save-blend", action="store_true")
 ap.add_argument("--resolution", default="1600x1200")
 A = ap.parse_args(sys.argv[sys.argv.index("--") + 1:])
 
+
+def use_nodes(idblock):
+    """Node trees are always on in newer Blender; 'use_nodes' is deprecated (removed in 6.0)."""
+    try:
+        idblock.use_nodes = True
+    except AttributeError:
+        pass
+
 map_file = os.path.splitext(A.glb)[0] + ".materials.json"
 MAP = json.load(open(map_file, encoding="utf-8")) if os.path.exists(map_file) else {}
 DEFAULT = {"mode": "solid", "color": [0.78, 0.78, 0.76], "roughness": 0.5}
@@ -35,7 +43,7 @@ def world_bbox(objs):
 _cache = {}
 
 def mat_solid(name, r):
-    m = bpy.data.materials.new(name); m.use_nodes = True
+    m = bpy.data.materials.new(name); use_nodes(m)
     b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = (*r["color"], 1); b.inputs["Roughness"].default_value = r.get("roughness", 0.5)
     b.inputs["Metallic"].default_value = r.get("metal", 0.0)
@@ -49,7 +57,7 @@ def mat_glass(name, r):
     return m
 
 def mat_wood(name, r, axis):
-    m = bpy.data.materials.new(name); m.use_nodes = True
+    m = bpy.data.materials.new(name); use_nodes(m)
     N = m.node_tree.nodes; L = m.node_tree.links
     b = N["Principled BSDF"]; b.inputs["Roughness"].default_value = r.get("roughness", 0.45)
     tc = N.new("ShaderNodeTexCoord"); mp = N.new("ShaderNodeMapping")
@@ -97,7 +105,7 @@ if not A.no_wall:
     bpy.context.object.name = "Wall"
     bpy.context.object.data.materials.append(mat_solid("Wall", {"color": [0.52, 0.50, 0.47], "roughness": 0.9}))
 
-w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w; w.use_nodes = True
+w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w; use_nodes(w)
 hdri = bpy.utils.system_resource("DATAFILES", path=os.path.join("studiolights", "world", "interior.exr"))
 if hdri and os.path.exists(hdri):
     env = w.node_tree.nodes.new("ShaderNodeTexEnvironment"); env.image = bpy.data.images.load(hdri)
@@ -133,7 +141,8 @@ else:
 sc.cycles.samples = A.samples; sc.cycles.use_denoising = True
 rx, ry = (int(v) for v in A.resolution.lower().split("x"))
 sc.render.resolution_x, sc.render.resolution_y = rx, ry
-sc.view_settings.view_transform = "AgX"
+try: sc.view_settings.view_transform = "AgX"          # Blender 4.0+; older versions keep Filmic
+except Exception: pass
 try: sc.view_settings.look = "AgX - Medium High Contrast"
 except Exception: pass
 

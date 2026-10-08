@@ -36,16 +36,16 @@ def raw(proj):
 
 
 def grouped(proj):
-    """Groups identical parts (same material, size and grain)."""
+    """Groups identical parts (same material, size, grain and note)."""
     d = raw(proj)
     g = {}
     for k, items in d.items():
         acc = OrderedDict()
         for it in items:
-            if k in ("panel", "solid", "glass"):
-                key = (it["material"], it["thk"], it["length"], it["width"], it["grain"])
+            if k in ("panel", "solid", "glass"):         # notes (edge banding, machining) keep parts apart
+                key = (it["material"], it["thk"], it["length"], it["width"], it["grain"], it["note"])
             elif k == "profile":
-                key = (it["material"], it["section"], it["length"])
+                key = (it["material"], it["section"], it["length"], it["note"])
             else:
                 key = (it["material"], it["desc"])
             if key not in acc:

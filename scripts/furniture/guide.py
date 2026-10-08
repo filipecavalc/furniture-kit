@@ -12,7 +12,7 @@ page = dict(
 Text lines starting with "- " become bullets; lines like "1. " stay numbered as written.
 """
 import os
-from .i18n import font
+from .i18n import font, fit_font
 
 
 def pdf(path, doc_title, pages):
@@ -66,7 +66,7 @@ def pdf(path, doc_title, pages):
         if k:
             w.newPage()
         p.fillRect(0, 0, W, H, QtGui.QColor("white"))
-        p.setPen(QtGui.QColor("#222")); p.setFont(font(H * 0.032, True))
+        p.setPen(QtGui.QColor("#222")); p.setFont(fit_font(pg["title"], (W - 2 * m) * 0.75, H * 0.032, True))
         p.drawText(QtCore.QRectF(m, m * 0.6, W - 2 * m, H * 0.06), QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, pg["title"])
         p.setFont(font(H * 0.017)); p.setPen(QtGui.QColor("#666"))
         p.drawText(QtCore.QRectF(m, m * 0.6, W - 2 * m, H * 0.06), QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter,

@@ -29,5 +29,8 @@ Pull requests with new regional catalogs are welcome.
 | `color` | RGB 0-1 for the FreeCAD model |
 | `render` | Blender material: `mode` `solid` / `wood` / `glass`, `color` or `light`+`dark`, `roughness`, `metal` |
 
-`defaults` holds construction values: saw kerf, sheet edge trim, solid-wood allowance, drawer slide
-clearance and gaps between fronts. Values with a matching `*_verify: true` are estimates.
+`defaults` holds construction values. The library uses the saw kerfs (`panel_kerf_mm`,
+`bar_kerf_mm`), the sheet edge trim (`panel_trim_mm`) and the solid-wood allowance
+(`solid_allowance_mm`). Drawer slide clearance and gaps between fronts are reference values for
+writing `build.py` parameters. Estimates are flagged with `bar_kerf_verify` / `slide_clearance_verify`
+or, inside an object, `"verify": true`.

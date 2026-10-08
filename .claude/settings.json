@@ -5,6 +5,13 @@
       "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1)",
       "Bash(bash setup/check.sh)"
+    ],
+    "ask": [
+      "Bash(winget *)", "PowerShell(winget *)",
+      "Bash(brew *)", "Bash(curl *)", "Bash(wget *)", "Bash(sudo *)",
+      "Bash(*astral.sh*)", "PowerShell(*astral.sh*)",
+      "PowerShell(Invoke-WebRequest *)", "PowerShell(Invoke-RestMethod *)",
+      "PowerShell(Expand-Archive *)"
     ]
   }
 }

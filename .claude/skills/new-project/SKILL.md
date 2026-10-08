@@ -5,8 +5,10 @@ description: Create a new furniture project folder (projects/<Name>) from the te
 
 # New project
 
-1. Pick a name with the user: letters, digits and underscores, no accents or spaces
-   (`Shoe_Cabinet`, `Garden_Bench`). If `projects/<Name>/project.md` already exists, open it instead.
+1. Pick a name with the user: letters, digits and underscores, starting with a letter, no accents or
+   spaces (`Shoe_Cabinet`, `Garden_Bench`, `Wardrobe_2_Doors`). The folder name becomes the FreeCAD
+   document name and the library rejects anything else. If `projects/<Name>/project.md` already
+   exists, open it instead.
 2. Create `projects/<Name>/` by copying `templates/project/` (it contains `project.md` and
    `model/build.py`), plus the empty folders `references/`, `images/`, `drawings/`, `cutlist/`,
    `render/`. Use your file tools; no script or Python is needed.

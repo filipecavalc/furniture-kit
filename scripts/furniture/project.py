@@ -19,7 +19,44 @@ from . import catalog
 
 PROPS = ("Furn_Material", "Furn_Type", "Furn_Grain", "Furn_Section", "Furn_Desc", "Furn_Note")
 AXES = (".Placement.Base.x", ".Placement.Base.y", ".Placement.Base.z")
-RESERVED = ("e", "pi")          # FreeCAD expression constants
+# FreeCAD expression constants and unit symbols: an alias with one of these names is read as the
+# constant/unit, not as the parameter
+RESERVED = {"e", "pi", "mm", "cm", "dm", "m", "km", "um", "nm", "in", "ft", "yd", "mi", "thou", "mil",
+            "h", "min", "s", "ms", "g", "kg", "mg", "t", "lb", "oz", "l", "ml", "A", "V", "W", "N", "J",
+            "Pa", "kPa", "MPa", "K", "C", "F", "H", "S", "T", "deg", "rad", "Hz", "mol", "cd", "ohm"}
+GRAINS = ("", "length", "width")
+
+
+def check_name(name, what="name"):
+    """FreeCAD rewrites names with spaces, accents, '-' or a leading digit, and lookups then fail."""
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name or ""):
+        raise ValueError(f"{what} '{name}': use only letters, digits and '_', starting with a letter "
+                         f"(e.g. '{re.sub(r'[^A-Za-z0-9_]', '_', name or 'x').lstrip('0123456789_') or 'Name'}')")
+    return name
+
+
+def parse_section(section):
+    """'RECT 30x50x1.5' -> ('RECT', a, b, wall, canonical). Accepts lower case and decimal commas.
+    canonical is the purchase spec used to group bars: larger side first for RECT."""
+    try:
+        kind, size = section.split()
+        kind = kind.upper()
+        n = [float(v) for v in size.lower().replace(",", ".").split("x")]
+    except ValueError:
+        raise ValueError(f"invalid section '{section}': use 'RECT axbxwall', 'SQ axwall', 'ROUND dxwall', 'ROUND d' or 'BAR axb'")
+    if kind == "RECT" and len(n) == 3: a, b, t = n
+    elif kind == "SQ" and len(n) == 2: a, b, t = n[0], n[0], n[1]
+    elif kind == "BAR" and len(n) == 2: a, b, t = n[0], n[1], None
+    elif kind == "ROUND" and len(n) in (1, 2): a, b, t = n[0], n[0], (n[1] if len(n) == 2 else None)
+    else: raise ValueError(f"invalid section '{section}': use 'RECT axbxwall', 'SQ axwall', 'ROUND dxwall', 'ROUND d' or 'BAR axb'")
+    if t is not None and (t <= 0 or min(a, b) - 2 * t <= 0):
+        raise ValueError(f"section '{section}': the wall is too thick for the size")
+    g = lambda v: f"{v:g}"
+    if kind == "RECT": canon = f"RECT {g(max(a, b))}x{g(min(a, b))}x{g(t)}"
+    elif kind == "SQ": canon = f"SQ {g(a)}x{g(t)}"
+    elif kind == "BAR": canon = f"BAR {g(max(a, b))}x{g(min(a, b))}"
+    else: canon = f"ROUND {g(a)}x{g(t)}" if t else f"ROUND {g(a)}"
+    return kind, a, b, t, canon
 
 
 class Project:
@@ -27,7 +64,7 @@ class Project:
         """folder: project folder (default projects/<name>); outputs go to its subfolders."""
         import os
         from . import PROJECTS
-        self.name = name
+        self.name = check_name(name, "project name")
         self.folder = folder or os.path.join(PROJECTS, name)
         if new:
             if name in App.listDocuments():
@@ -53,7 +90,7 @@ class Project:
             if alias in self.aliases:
                 sp.set(alias, str(value)); continue
             if alias in RESERVED:
-                raise ValueError(f"alias '{alias}' clashes with a FreeCAD constant")
+                raise ValueError(f"alias '{alias}' clashes with a FreeCAD constant or unit; use a descriptive name")
             sp.set(f"A{row}", alias); sp.set(f"B{row}", str(value)); sp.set(f"C{row}", desc)
             sp.setAlias(f"B{row}", alias); self.aliases.append(alias); row += 1
         self.doc.recompute()
@@ -77,7 +114,11 @@ class Project:
 
     # ---------------- organisation
     def group(self, name, parent=None):
-        g = self.doc.getObject(name) or self.doc.addObject("App::DocumentObjectGroup", name)
+        check_name(name, "group name")
+        g = self.doc.getObject(name)
+        if g is not None and g.TypeId != "App::DocumentObjectGroup":
+            raise ValueError(f"'{name}' is already a part; a group needs a different name (e.g. '{name}_Group')")
+        g = g or self.doc.addObject("App::DocumentObjectGroup", name)
         g.Label = name
         if parent is not None:
             self._group(parent).addObject(g)
@@ -89,6 +130,8 @@ class Project:
     def _meta(self, o, material, kind, grain="", section="", desc="", note=""):
         if material not in self.cat["materials"]:
             raise KeyError(f"material '{material}' is not in the catalog")
+        if grain not in GRAINS:
+            raise ValueError(f"grain '{grain}' must be one of {GRAINS}")
         for pr in PROPS:
             if pr not in o.PropertiesList:
                 o.addProperty("App::PropertyString", pr, "Furniture")
@@ -100,7 +143,26 @@ class Project:
             if kind == "glass":
                 o.ViewObject.Transparency = 60
 
+    def _validate(self, name, group, material, grain=""):
+        """Checks everything before any object is created, so an error leaves no half-made part behind."""
+        self._unique(name)
+        if isinstance(group, str):
+            check_name(group, "group name")
+            g = self.doc.getObject(group)
+            if g is not None and g.TypeId != "App::DocumentObjectGroup":
+                raise ValueError(f"'{group}' is already a part; a group needs a different name (e.g. '{group}_Group')")
+        if material not in self.cat["materials"]:
+            raise KeyError(f"material '{material}' is not in the catalog")
+        if grain not in GRAINS:
+            raise ValueError(f"grain '{grain}' must be one of {GRAINS}")
+
+    def _unique(self, name):
+        check_name(name, "part name")
+        if self.doc.getObject(name) is not None:
+            raise ValueError(f"name '{name}' is already used by a part or group; every part needs its own name")
+
     def _box(self, name, dims, pos):
+        self._unique(name)
         b = self.doc.addObject("Part::Box", name); b.Label = name
         for prop, ex in zip(("Length", "Width", "Height"), dims):
             b.setExpression(prop, self.expr(ex))
@@ -112,50 +174,52 @@ class Project:
     def panel(self, name, group, dims, pos, material, grain=None, note=""):
         """Sheet-goods part (MDF, particleboard, plywood...). dims = (dx, dy, dz); the smallest is the
         thickness. grain: None = material default ('length' if the material has grain)."""
-        b = self._box(name, dims, pos)
-        has_grain = self.cat["materials"][material].get("grain", False)
+        has_grain = self.cat["materials"].get(material, {}).get("grain", False)
         g = grain if grain is not None else ("length" if has_grain else "")
+        self._validate(name, group, material, g)
+        b = self._box(name, dims, pos)
         self._meta(b, material, "panel", grain=g, note=note)
         self._group(group).addObject(b); return b
 
     def solid(self, name, group, dims, pos, material, grain="length", note=""):
         """Solid-wood part (final, surfaced dimensions)."""
+        self._validate(name, group, material, grain)
         b = self._box(name, dims, pos)
         self._meta(b, material, "solid", grain=grain, note=note)
         self._group(group).addObject(b); return b
 
     def glass(self, name, group, dims, pos, material="glass_clear", note=""):
+        self._validate(name, group, material)
         b = self._box(name, dims, pos)
         self._meta(b, material, "glass", note=note)
         self._group(group).addObject(b); return b
 
     def hardware(self, name, group, dims, pos, desc, material="hardware_metal"):
         """Simplified (box) stand-in for a bought-in hardware item."""
+        self._validate(name, group, material)
         b = self._box(name, dims, pos)
         self._meta(b, material, "hardware", desc=desc)
         self._group(group).addObject(b); return b
 
     def profile(self, name, group, section, length, pos, axis="x", material="steel_black", note=""):
         """Metal profile / tube.
-        section: 'RECT axbxwall' | 'SQ axwall' | 'ROUND diameterxwall' | 'BAR axb' (solid flat bar).
+        section: 'RECT axbxwall' | 'SQ axwall' | 'ROUND diameterxwall' | 'ROUND diameter' (solid rod) |
+                 'BAR axb' (solid flat bar). Stored in Furn_Section in a canonical form (larger side first).
         length: number or expression with parameters.
         pos: minimum corner of the bounding box (numbers or expressions).
         axis: direction of the length ('x', 'y' or 'z').
         RECT: 'a' goes on the 1st cross axis (x->y, y->x, z->x) and 'b' on the 2nd (x->z, y->z, z->y)."""
-        kind, size = section.split()
-        n = [float(v) for v in size.lower().split("x")]
-        if kind == "RECT": a, b, t = n
-        elif kind == "SQ": a, b, t = n[0], n[0], n[1]
-        elif kind == "BAR": a, b, t = n[0], n[1], None
-        elif kind == "ROUND": a, b, t = n[0], n[0], n[1]
-        else: raise ValueError("invalid section: " + section)
+        kind, a, b, t, canon = parse_section(section)
+        self._validate(name, group, material)
+        if axis not in ("x", "y", "z"):
+            raise ValueError(f"axis '{axis}' must be 'x', 'y' or 'z'")
         L = f"({length})"
         dims = lambda s1, s2: {"x": (L, s1, s2), "y": (s1, L, s2), "z": (s1, s2, L)}[axis]
         shift = lambda d: {"x": ("0", d, d), "y": (d, "0", d), "z": (d, d, "0")}[axis]
 
         if kind == "ROUND":
-            outer = self._cylinder(name + "_out", a / 2, L, pos, axis, a / 2)
-            inner = self._cylinder(name + "_in", a / 2 - t, L, pos, axis, a / 2)
+            outer = self._cylinder(name + "_out" if t else name, a / 2, L, pos, axis, a / 2)
+            inner = self._cylinder(name + "_in", a / 2 - t, L, pos, axis, a / 2) if t else None
         else:
             outer = self._box(name + "_out" if t else name, dims(str(a), str(b)), pos)
             inner = None
@@ -163,12 +227,13 @@ class Project:
                 ipos = [f"({pp}) + {dd}" for pp, dd in zip(pos, shift(str(t)))]
                 inner = self._box(name + "_in", dims(str(a - 2 * t), str(b - 2 * t)), ipos)
         if inner is not None:
+            self._unique(name)
             obj = self.doc.addObject("Part::Cut", name); obj.Label = name
             obj.Base = outer; obj.Tool = inner
             outer.ViewObject.Visibility = False; inner.ViewObject.Visibility = False
         else:
             obj = outer
-        self._meta(obj, material, "profile", section=section, note=note)
+        self._meta(obj, material, "profile", section=canon, note=note)
         if "Furn_Length" not in obj.PropertiesList:
             obj.addProperty("App::PropertyFloat", "Furn_Length", "Furniture")
         obj.setExpression("Furn_Length", self.expr(length))
@@ -177,6 +242,7 @@ class Project:
 
     def _cylinder(self, name, r, length, pos, axis, center):
         """Cylinder along 'axis'; 'center' = distance from the minimum corner to the axis."""
+        self._unique(name)
         c = self.doc.addObject("Part::Cylinder", name); c.Label = name
         c.Radius = r; c.setExpression("Height", self.expr(length))
         c.Placement.Rotation = {"z": App.Rotation(),

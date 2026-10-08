@@ -41,7 +41,7 @@ def assembly(proj, glb_path, steps, title, final=""):
         shots.append(dict(id=sid, title=st["title"], caption=st.get("caption", ""), target="items",
                           az=st.get("az", 35), el=st.get("el", 22), zoom=st.get("zoom", 1.0),
                           interval=st.get("interval", 0.4), dur=st.get("dur", 1.0)))
-        for lab in parts_of(proj, st["parts"]):
+        for lab in parts_of(proj, st["parts"], strict=True):
             items.append(dict(label=lab, shot=sid, type=kinds.get(lab, "panel"), entry=list(st.get("entry", (0, 0, 300)))))
     data = dict(title=title, final=final, bbox=[[bb.XMin, bb.YMin, bb.ZMin], [bb.XMax, bb.YMax, bb.ZMax]],
                 shots=shots, items=items, groups={})

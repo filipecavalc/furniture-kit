@@ -1,0 +1,36 @@
+name: Bug report
+description: Something did not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you asked for, what you expected, what you got. Screenshots help.
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: Kit version, placeholder: "1.0.0 (first line of the environment check output)"}
+    validations: {required: true}
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows 11, Windows 10, macOS Apple Silicon, macOS Intel, Linux, Other]
+    validations: {required: true}
+  - type: dropdown
+    id: surface
+    attributes: {label: Claude Code, options: [Desktop app, Terminal (CLI)]}
+  - type: textarea
+    id: check
+    attributes:
+      label: Environment check output
+      description: Ask Claude Code to "run the setup check" and paste the whole output.
+      render: text
+    validations: {required: true}
+  - type: textarea
+    id: selftest
+    attributes:
+      label: Self-test report (if the problem is in FreeCAD output)
+      description: Paste projects/_selftest/selftest.md (see TESTING.md, "Only want the quick checks?").
+      render: markdown

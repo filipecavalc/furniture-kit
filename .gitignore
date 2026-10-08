@@ -7,8 +7,13 @@ CLAUDE.local.md
 projects/*
 !projects/.gitkeep
 
-# downloads made during setup
+# downloads made during setup, test packages
 setup/downloads/
+selftest-*.zip
+
+# operating system files
+.DS_Store
+Thumbs.db
 
 # generated / heavy files
 __pycache__/

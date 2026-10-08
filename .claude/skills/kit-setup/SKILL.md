@@ -46,9 +46,9 @@ Download page: https://www.freecad.org/downloads.php
 
 - **Windows:** installer from the page. Or, if the user agrees, `winget install --id FreeCAD.FreeCAD -e --source winget`
   (an administrator prompt may appear).
-- **macOS:** `.dmg` from the page (drag to Applications), or `brew install --cask freecad`. If macOS
-  refuses to open it the first time ("cannot verify the developer"), the user allows it in System
-  Settings > Privacy & Security > Open Anyway.
+- **macOS:** `.dmg` from the page (drag to Applications), or `brew install --cask freecad` (no
+  password needed). On the first launch macOS asks for confirmation, also when installed with brew:
+  the user confirms the dialog (if it refuses, System Settings > Privacy & Security > Open Anyway).
 - **Linux:** AppImage or Flatpak from the page (`flatpak install flathub org.freecad.FreeCAD`) or the
   distribution package. Flatpak/Snap keep the user folder elsewhere; the check prints the right one.
 - The user opens FreeCAD once so it creates its user folder. If FreeCAD asks about migrating settings
@@ -74,16 +74,25 @@ Linux: usually `~/.local/share/FreeCAD/v1-1`).
      drag `FreeCADMCP` into it.
    - **Windows CLI, macOS, Linux:** you may copy it after asking. Create the `Mod` folder first
      (copying into a folder that does not exist yet can flatten the contents).
-3. The user restarts FreeCAD, picks the **MCP Addon** workbench and clicks **Start RPC Server**.
-   Recommend turning on auto-start in the addon's menu so it starts with FreeCAD.
-4. Run the check: addon OK and RPC server listening on 9875.
+3. Turn on auto-start so the RPC server starts with FreeCAD:
+   - **macOS, Linux, Windows CLI:** you may do it after asking (tested on macOS 2026-10-08). Write
+     `<FreeCAD user folder>/freecad_mcp_settings.json` with
+     `{"remote_enabled": false, "allowed_ips": "127.0.0.1", "auto_start_rpc": true}` (keep other keys if
+     the file exists), then restart FreeCAD: macOS `osascript -e 'quit app "FreeCAD"'` and `open -a FreeCAD`;
+     Linux close it and start it again.
+   - **Windows, desktop app:** the file would land in the app's private copy of `%APPDATA%`. Ask the user
+     to restart FreeCAD, pick the **MCP Addon** workbench, click **Start RPC Server**, and turn on
+     auto-start in the addon's menu.
+4. Run the check: addon OK, auto-start on and RPC server listening on 9875.
 
 ## 4. MCP server not connected
 
 Symptoms: no `mcp__freecad__*` tools in the session, or calls fail.
 
-- Folder not trusted / server not approved: ask the user to approve it (CLI: `/mcp`; desktop app:
-  the prompt appears when the folder is opened; restarting the session shows it again).
+- Folder not trusted / server not approved ("Pending approval" in `/mcp`): ask the user to approve it
+  (CLI: `/mcp`; desktop app: the prompt appears when the folder is opened; restarting the session
+  shows it again). If they declined it earlier, `claude mcp reset-project-choices` in a terminal opened
+  in the kit folder brings the prompt back.
 - uv missing or not on Claude's PATH: install it (step 1) and fully restart Claude.
 - Antivirus or proxy intercepting HTTPS: `.mcp.json` already passes `--system-certs` (uv 0.11 or
   newer; the check warns about older ones: `uv self update`).
@@ -110,8 +119,9 @@ Ask, one topic at a time:
 2. Country/region → material catalog. If there is no `catalog/<code>.json` for it, offer to create one
    from `br.json` with local names, sheet/bar sizes and thicknesses researched from local suppliers,
    each unconfirmed value marked `"verify": true` with its `"source"`. Never guess supplier data.
-3. Who builds: the user (which tools: table saw, circular saw, router, drill, pocket-hole jig,
-   welding and which process, metal cutting...), a cabinet shop, a metal shop, or a mix.
+3. Who builds: the user, a cabinet shop, a metal shop, or a mix. If the user builds, ask in a
+   separate open question which tools they have (table saw, circular saw, router, drill, pocket-hole
+   jig, welding and which process, metal cutting...): a multiple-choice answer does not capture them.
 4. Preferences: materials they like or avoid, how they buy (local store, lumber yard, online), local
    trade names and units, anything they always decide themselves (e.g. finishes).
 

@@ -1,7 +1,7 @@
 # Step-by-step assembly animation (Blender in the background).
 # Input: .glb exported from FreeCAD + .materials.json + .assembly.json (next to the .glb).
 #   blender -b --factory-startup --python scripts/animate_assembly.py -- <model.glb> <out.mp4>
-#           [--fps 24] [--resolution 1280x720] [--engine eevee|cycles] [--samples 16]
+#           [--fps 24] [--resolution 1280x720] [--engine eevee|cycles] [--samples 64]
 #           [--frame N[,M] (renders only those frames as PNG, to check before the video)]
 #           [--until N (cuts the video at frame N)] [--save-blend]
 # Use absolute paths: with relative paths Blender may write somewhere else.
@@ -39,11 +39,19 @@ ap.add_argument("glb"); ap.add_argument("out")
 ap.add_argument("--fps", type=int, default=24)
 ap.add_argument("--resolution", default="1280x720")
 ap.add_argument("--engine", default="eevee")
-ap.add_argument("--samples", type=int, default=16)
+ap.add_argument("--samples", type=int, default=64)
 ap.add_argument("--frame", default="")
 ap.add_argument("--until", type=int, default=0)
 ap.add_argument("--save-blend", action="store_true")
 A = ap.parse_args(sys.argv[sys.argv.index("--") + 1:])
+
+
+def use_nodes(idblock):
+    """Node trees are always on in newer Blender; 'use_nodes' is deprecated (removed in 6.0)."""
+    try:
+        idblock.use_nodes = True
+    except AttributeError:
+        pass
 
 base_file = os.path.splitext(A.glb)[0]
 MAP = json.load(open(base_file + ".materials.json", encoding="utf-8"))
@@ -81,14 +89,21 @@ mm = lambda v: Vector(v) * K + offset
 _cache = {}
 
 def mat_solid(name, r):
-    m = bpy.data.materials.new(name); m.use_nodes = True
+    m = bpy.data.materials.new(name); use_nodes(m)
     b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = (*r["color"], 1); b.inputs["Roughness"].default_value = r.get("roughness", 0.5)
     b.inputs["Metallic"].default_value = r.get("metal", 0.0)
     return m
 
+def mat_glass(name, r):
+    m = mat_solid(name, r); b = m.node_tree.nodes["Principled BSDF"]
+    for k in ("Transmission Weight", "Transmission"):
+        if k in b.inputs: b.inputs[k].default_value = 1.0; break
+    b.inputs["IOR"].default_value = 1.5
+    return m
+
 def mat_wood(name, r, axis):
-    m = bpy.data.materials.new(name); m.use_nodes = True
+    m = bpy.data.materials.new(name); use_nodes(m)
     N = m.node_tree.nodes; L = m.node_tree.links
     b = N["Principled BSDF"]; b.inputs["Roughness"].default_value = r.get("roughness", 0.45)
     tc = N.new("ShaderNodeTexCoord"); mp = N.new("ShaderNodeMapping")
@@ -118,7 +133,7 @@ def material_for(name, o):
         k = (key, axis)
         if k not in _cache: _cache[k] = mat_wood(f"{key}_{'XYZ'[axis]}", r, axis)
         return _cache[k]
-    if key not in _cache: _cache[key] = mat_solid(key, r)
+    if key not in _cache: _cache[key] = mat_glass(key, r) if r["mode"] == "glass" else mat_solid(key, r)
     return _cache[key]
 
 for name, o in OBJ.items():
@@ -132,7 +147,7 @@ for name, o in OBJ.items():
 center = (bmin + bmax) / 2; S = max(bmax - bmin)
 bpy.ops.mesh.primitive_plane_add(size=S * 80, location=(center.x, center.y, bmin.z - 0.0005))
 floor = bpy.context.object; floor.name = "Floor"; floor.data.materials.append(mat_solid("Floor", {"color": [0.22, 0.21, 0.19], "roughness": 0.7}))
-w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w; w.use_nodes = True
+w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w; use_nodes(w)
 hdri = bpy.utils.system_resource("DATAFILES", path=os.path.join("studiolights", "world", "interior.exr"))
 if hdri and os.path.exists(hdri):
     env = w.node_tree.nodes.new("ShaderNodeTexEnvironment"); env.image = bpy.data.images.load(hdri)
@@ -174,7 +189,7 @@ def key_cam(f, target_pos, cam_pos):
 
 # ---------------------------------------------------------------- captions (dark band at the bottom, attached to the camera)
 def mat_emission(name, color, strength=1.0):
-    m = bpy.data.materials.new(name); m.use_nodes = True; N = m.node_tree.nodes
+    m = bpy.data.materials.new(name); use_nodes(m); N = m.node_tree.nodes
     for n in list(N): N.remove(n)
     em = N.new("ShaderNodeEmission"); em.inputs["Color"].default_value = (*color, 1); em.inputs["Strength"].default_value = strength
     out = N.new("ShaderNodeOutputMaterial"); m.node_tree.links.new(em.outputs[0], out.inputs[0])
@@ -371,7 +386,8 @@ print("FRAMES", sc.frame_end, "SECONDS", sc.frame_end / FPS)
 
 # ---------------------------------------------------------------- render
 sc.render.resolution_x, sc.render.resolution_y = rx, ry
-sc.view_settings.view_transform = "AgX"
+try: sc.view_settings.view_transform = "AgX"          # Blender 4.0+; older versions keep Filmic
+except Exception: pass
 sc.view_settings.exposure = -0.2
 if A.engine == "cycles":
     sc.render.engine = "CYCLES"
@@ -390,6 +406,8 @@ else:
         except Exception: pass
     try: sc.eevee.taa_render_samples = A.samples
     except Exception: pass
+print("ENGINE", sc.render.engine, "DEVICE", getattr(sc.cycles, "device", "") if sc.render.engine == "CYCLES" else "GPU (EEVEE)",
+      "SAMPLES", A.samples)
 if A.save_blend:
     bpy.ops.wm.save_as_mainfile(filepath=os.path.splitext(A.out)[0] + ".blend")
 for fr in [int(q) for q in A.frame.split(",") if q.strip()]:

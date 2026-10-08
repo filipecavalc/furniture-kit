@@ -3,7 +3,7 @@
 Angles: azimuth 0 = from the front (camera at -Y looking +Y); positive turns towards the
 furniture's right. Elevation in degrees above the horizon.
 """
-import os
+import os, re
 import FreeCAD as App
 import FreeCADGui as Gui
 from .i18n import font
@@ -50,7 +50,8 @@ def save(path, view=None, w=1600, h=1200):
 
 
 def original_colors(proj):
-    return {o.Name: tuple(proj.cat["materials"][o.Furn_Material]["color"]) for o in proj.parts()}
+    mats = proj.cat["materials"]
+    return {o.Name: tuple(mats[o.Furn_Material].get("color", (0.8, 0.8, 0.8))) for o in proj.parts()}
 
 
 def show(proj, visible=None, highlight=(), highlight_color=(0.20, 0.55, 0.95)):
@@ -63,9 +64,10 @@ def show(proj, visible=None, highlight=(), highlight_color=(0.20, 0.55, 0.95)):
         o.ViewObject.ShapeColor = highlight_color if (o.Label in highlight or o.Name in highlight) else colors[o.Name]
 
 
-def parts_of(proj, names):
-    """Expands group names into part Labels (recursive). Part names pass through."""
-    out = []
+def parts_of(proj, names, strict=False):
+    """Expands group names into part Labels (recursive). Part names pass through.
+    strict: raise if a name matches no part or group (catches typos in steps and offsets)."""
+    out, unknown = [], []
     for n in names:
         g = proj.doc.getObject(n) or next((o for o in proj.doc.Objects if o.Label == n), None)
         if g is not None and g.TypeId == "App::DocumentObjectGroup":
@@ -73,6 +75,10 @@ def parts_of(proj, names):
                 out += parts_of(proj, [child.Name])
         elif g is not None and "Furn_Type" in g.PropertiesList:
             out.append(g.Label)
+        else:
+            unknown.append(n)
+    if strict and unknown:
+        raise ValueError(f"no part or group named {unknown}")
     return out
 
 
@@ -92,15 +98,21 @@ def assembly(proj, steps, folder, prefix="A"):
     so far and highlights the new parts in blue. 'title' becomes the file name; 'caption' (optional) is
     the contact-sheet text. options: {"el": elevation (25), "hide": [groups or parts hidden in this image
     only, e.g. the front wall to see inside]}."""
+    old = re.compile(rf"^{re.escape(prefix)}[1-9]\d*_.*\.png$")       # images of a previous run (keeps A0_ exploded view)
+    if os.path.isdir(folder):
+        for f in os.listdir(folder):
+            if old.match(f):
+                os.remove(os.path.join(folder, f))
     acc, out = [], []
     for i, step in enumerate(steps, 1):
         title, names, az = step[:3]
         caption = step[3] if len(step) > 3 else title.replace("_", " ").capitalize()
         op = step[4] if len(step) > 4 else {}
-        new = parts_of(proj, names); acc += new
-        hidden = set(parts_of(proj, op.get("hide", [])))
+        new = parts_of(proj, names, strict=True); acc += new
+        hidden = set(parts_of(proj, op.get("hide", []), strict=True))
         show(proj, [l for l in acc if l not in hidden], new); cam(az, op.get("el", 25))
-        out.append((save(os.path.join(folder, f"{prefix}{i}_{title}.png")), f"{i}. {caption}"))
+        fname = re.sub(r"[^\w-]", "_", title)                  # titles become file names on every OS
+        out.append((save(os.path.join(folder, f"{prefix}{i}_{fname}.png")), f"{i}. {caption}"))
     show(proj); cam(35, 22)
     return out
 
@@ -109,7 +121,7 @@ def exploded(proj, offsets, path, default=(0, 0, 0), azimuth=35, elevation=22):
     """offsets: dict {Label or group: (dx, dy, dz)}. Builds a temporary document with static copies."""
     mapping = {}
     for k, d in offsets.items():
-        for lab in parts_of(proj, [k]):
+        for lab in parts_of(proj, [k], strict=True):
             mapping[lab] = d
     colors = original_colors(proj)
     tmp = App.newDocument("Exploded_tmp")
@@ -129,7 +141,10 @@ def crop(path, pad=40):
     """QImage of the PNG without the white margins."""
     import numpy as np
     from PySide import QtGui
-    im = QtGui.QImage(path).convertToFormat(QtGui.QImage.Format_RGB32)
+    im = QtGui.QImage(path)
+    if im.isNull():                      # missing or unreadable file: callers check isNull()
+        return im
+    im = im.convertToFormat(QtGui.QImage.Format_RGB32)
     w, h = im.width(), im.height()
     arr = np.frombuffer(im.constBits(), dtype=np.uint8, count=im.sizeInBytes()).reshape(h, im.bytesPerLine() // 4, 4)[:, :w, :3]
     ys, xs = np.where((arr < 245).any(axis=2))

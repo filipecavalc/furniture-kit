@@ -82,7 +82,7 @@ phases: only model when they ask you to design.
 ## Library `furniture` (summary)
 
 ```python
-from furniture import project, check, bom, cutlist, lumber, guide, images, drawing, export
+from furniture import project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest
 pj = project.Project("Name", folder=HERE)          # new document (project.open_project(...) for an open one)
 pj.params([("width", 800, "Overall width"), ...])  # 'Params' spreadsheet; use the aliases in expressions
 pj.panel(name, group, (dx, dy, dz), (x, y, z), "mdf_white", grain=None, note="")
@@ -118,9 +118,16 @@ After changing the library run `furniture.reload()` (every `build.py` already do
   Without supplier confirmation mark `"verify": true`; the cut list warns about it.
 - Grain: `length` = along the longer side of the part; `width` = along the shorter side. Parts with
   grain are never rotated in the cut list.
-- Parameter aliases must not be FreeCAD constants or unit symbols: never `e`, `pi`, `mm`, `cm`, `m`,
-  `in`, `ft`, `h`, `s`, `g`, `l`, `t`, `A`, `V`, `W`, `N`. Prefer descriptive names (`thk`, `width`).
-- Part names without accents or spaces (`Side_Left`). Drawing texts and captions may use accents.
+- Parameter aliases must not be FreeCAD constants or unit symbols (`e`, `pi`, `mm`, `m`, `in`, `h`,
+  `t`, `H`, `W`...; full list in `RESERVED`, `scripts/furniture/project.py`, which rejects them).
+  Prefer descriptive names (`thk`, `width`, `height`).
+- Part names without accents or spaces, unique in the project, and different from group names
+  (part `Back` cannot live in a group called `Back`; use `Back_Panel`). Drawing texts and captions may
+  use accents.
+- Everything a user reads comes out in the documents language (`config/local.json`): part names
+  (they appear in the bill of materials and cut lists: `Lateral_Esq` for pt-BR, `Side_Left` for en),
+  `note=` texts, drawing titles and notes, assembly captions and guide pages written in `build.py`.
+  The examples are in English; translate those texts when you start from them.
 
 ## Quality rules
 
@@ -141,8 +148,9 @@ After changing the library run `furniture.reload()` (every `build.py` already do
   vertex coordinates come in real mm, centred on the view.
 - The active FreeCAD window may be a drawing: `images.use(pj)` picks the right 3D view.
 - Blender: use absolute paths for outputs (relative ones may land elsewhere).
-- Windows + Claude desktop app (MSIX): files written by Claude under `%APPDATA%` go to a private
-  copy that FreeCAD does not see. Prepare files inside the kit folder and ask the user to move them.
+- Windows + Claude desktop app (MSIX; observed, not in the Claude Code docs): files written by Claude
+  under `%APPDATA%` go to a private copy that FreeCAD does not see. Prepare files inside the kit folder
+  and ask the user to move them.
 - If reading a PDF with a page range fails, read the whole file.
 
 ## Known limitations
@@ -153,4 +161,5 @@ After changing the library run `furniture.reload()` (every `build.py` already do
 - Edge banding is not calculated automatically (use `note=` on the parts).
 - Render wood is procedural (approximate colour and grain), not the manufacturer's texture.
 - Drawing layouts are per project: if sizes change a lot, adjust positions and scale in `build.py`.
-- Tested on Windows 11 only. macOS and Linux should work but have not been tested yet.
+- Tested on Windows 11 and macOS on Apple Silicon (see TESTING.md). macOS on Intel and Linux should
+  work but are untested: tell the user, and suggest `/kit-test` if they want to help.

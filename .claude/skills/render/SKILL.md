@@ -5,8 +5,10 @@ description: Render photo-style images or a step-by-step assembly video of a pro
 
 # Render and assembly animation
 
-Blender path: from the environment check (`setup/check.ps1` / `setup/check.sh`). Use absolute paths
-for every file and folder: with relative ones Blender may write somewhere else.
+Blender path: from the environment check (`setup/check.ps1` / `setup/check.sh`). Quote it when it is
+a path; when the check prints a command (`flatpak run org.blender.Blender`), use it unquoted. Use
+absolute paths for every file and folder: with relative ones Blender may write somewhere else.
+Blender 4.2 or newer is needed.
 
 ## Still images
 
@@ -19,7 +21,9 @@ Needs `<model>.glb` + `<model>.materials.json` (written by `export.glb`).
 Options: `--samples` (default 256; 32-64 for a quick check or on CPU), `--no-wall` (free-standing
 piece), `--save-blend` (keeps the scene), `--resolution 1600x1200`.
 Shots: `3q_right`, `3q_left`, `front`, `high_right`, `high_left`, `side`, `detail_right`, `detail_left`.
-The log prints `DEVICE OPTIX|CUDA|HIP|METAL|ONEAPI` or `DEVICE CPU`.
+The log prints `DEVICE OPTIX|CUDA|HIP|METAL|ONEAPI` or `DEVICE CPU`. The first GPU render on a new
+machine or Blender version can take 1-3 minutes longer while Blender compiles its GPU kernels (seen
+on Apple Silicon); tell the user it has not hung. Later renders take seconds.
 
 ## Assembly video (MP4)
 
@@ -33,8 +37,8 @@ move together, lids that open, screws turning in) is documented at the top of
 ```
 
 Check single frames first with `--frame 200,600` (writes `<out>_f200.png`...), look at them, then
-render the video. Options: `--fps`, `--resolution 1920x1080`, `--engine eevee|cycles`, `--samples`,
-`--until N`, `--save-blend`. Rules for a good video: parts never float (each enters from a direction
+render the video. Options: `--fps`, `--resolution 1920x1080`, `--engine eevee|cycles`, `--samples`
+(default 64; raise it if shadowed areas look grainy), `--until N`, `--save-blend`. Rules for a good video: parts never float (each enters from a direction
 that makes physical sense), groups that are assembled first move together, one caption per step.
 
 ## Always
