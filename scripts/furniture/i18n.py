@@ -86,8 +86,17 @@ STRINGS = {
 }
 
 
+_override = None
+
+
+def set_language(code=None):
+    """Forces a language for this FreeCAD session (None = back to config/local.json)."""
+    global _override
+    _override = code
+
+
 def lang():
-    code = config().get("language", "en")
+    code = _override or config().get("language", "en")
     return code if code in STRINGS else "en"
 
 

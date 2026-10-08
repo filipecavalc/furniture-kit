@@ -71,7 +71,7 @@ project) still asks you first.
 
 - Tested on Windows 11 with FreeCAD 1.1.3, Blender 5.1.2 and uv 0.11.
 - macOS and Linux: the library, render scripts and checks are written to be cross-platform, but have
-  not been tested on real machines yet. Please open an issue with the output of `bash setup/check.sh`.
+  not been tested on real machines yet. You can help: see [TESTING.md](TESTING.md) (run `/kit-test`).
 - Newer FreeCAD/Blender versions will probably work; the check tells you when yours differs from
   the tested one.
 
@@ -87,7 +87,7 @@ project) still asks you first.
 
 ```
 CLAUDE.md                  instructions for the assistant
-.claude/skills/            kit-setup, new-project, render
+.claude/skills/            kit-setup, new-project, render, kit-test
 .mcp.json                  FreeCAD MCP server
 setup/check.ps1, check.sh  read-only environment check
 scripts/furniture/         modelling library (runs inside FreeCAD)

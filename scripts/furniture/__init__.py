@@ -36,7 +36,7 @@ def catalog(name=None):
 
 
 def reload():
-    from . import i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export
-    for m in (i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export):
+    from . import i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest
+    for m in (i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest):
         importlib.reload(m)
     return "furniture reloaded"

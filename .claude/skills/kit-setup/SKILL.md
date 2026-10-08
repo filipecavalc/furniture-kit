@@ -46,7 +46,9 @@ Download page: https://www.freecad.org/downloads.php
 
 - **Windows:** installer from the page. Or, if the user agrees, `winget install --id FreeCAD.FreeCAD -e --source winget`
   (an administrator prompt may appear).
-- **macOS:** `.dmg` from the page (drag to Applications), or `brew install --cask freecad`.
+- **macOS:** `.dmg` from the page (drag to Applications), or `brew install --cask freecad`. If macOS
+  refuses to open it the first time ("cannot verify the developer"), the user allows it in System
+  Settings > Privacy & Security > Open Anyway.
 - **Linux:** AppImage or Flatpak from the page (`flatpak install flathub org.freecad.FreeCAD`) or the
   distribution package. Flatpak/Snap keep the user folder elsewhere; the check prints the right one.
 - The user opens FreeCAD once so it creates its user folder. If FreeCAD asks about migrating settings

@@ -102,6 +102,7 @@ images.standard_views / assembly (steps with options {"el":, "hide": [...]}) / e
 drawing.page / view / dim / envelope_dims / text / label / table / export_pdf
 export.glb(pj, file)                               # .glb + .materials.json for the render
 export.assembly(pj, glb, steps, title, final)      # .assembly.json for the animation
+selftest.run()                                     # builds the examples in projects/_selftest (see TESTING.md)
 ```
 
 Dims and positions accept numbers or expressions with the aliases (e.g. `"width - 2*thk"`).
