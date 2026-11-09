@@ -25,8 +25,11 @@ Add a block to `STRINGS` in `scripts/furniture/i18n.py` (copy `"en"`, keep every
 - The library in `scripts/furniture/` runs inside FreeCAD's Python (no pip packages). The Blender
   scripts in `scripts/` run with `blender -b --factory-startup`. Both must keep working on Windows,
   macOS and Linux.
-- Before opening a PR, run the self-test inside FreeCAD (see [TESTING.md](TESTING.md)) and include its
-  summary line. If you changed rendering, attach a render made with `--samples 32`.
+- Before opening a PR, run the unit tests (`uv run --no-project --with pytest python -m pytest`; CI
+  runs them too) and the self-test inside FreeCAD (see [TESTING.md](TESTING.md)), and include the
+  self-test summary line. Logic that does not need FreeCAD (rules, nesting, text) goes in a function
+  that can be tested without it (`scripts/furniture/core.py` or a module-level helper), with a test in
+  `tests/`. If you changed rendering, attach a render made with `--samples 32`.
 - The examples are also regression fixtures. Don't commit regenerated example images or PDFs unless
   the change is meant to alter them.
 - Changes to the library API, the catalog format or `.assembly.json` go in [CHANGELOG.md](CHANGELOG.md);

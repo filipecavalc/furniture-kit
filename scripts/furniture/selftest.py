@@ -8,6 +8,7 @@ Run inside FreeCAD (MCP execute_code), with KIT = the repository root:
 Copies examples/* to projects/_selftest/<Name> (the examples themselves are never touched), runs
 build() and deliverables() for each, plus the lumber plan, the assembly guide and a pt-BR cut list.
 Everything runs in English except the pt-BR step, whatever config/local.json says.
+After build() a "check" step fails when the model has collisions or invalid parts.
 Each step is timed; an error is recorded with its traceback and the next step still runs.
 """
 import os, sys, json, time, shutil, platform, traceback
@@ -40,6 +41,15 @@ def _step(results, name, fn):
         results.append(dict(step=name, ok=False, seconds=round(time.time() - t0, 1), error=traceback.format_exc()))
 
 
+def _model_check(project, check, name, folder):
+    """Fails (AssertionError) when the built model has collisions or invalid parts."""
+    pj = project.open_project(name, folder=folder)
+    col, inv = check.collisions(pj), check.invalid(pj)
+    if col or inv:
+        raise AssertionError(f"{name}: collisions={col or 'none'} invalid={inv or 'none'}")
+    return f"{len(pj.parts())} parts, no collisions, no invalid parts"
+
+
 def _load(build_py):
     ns = {"__file__": build_py, "__name__": "selftest_build"}
     with open(build_py, encoding="utf-8") as f:
@@ -58,7 +68,7 @@ def _files(folder):
 
 def run(examples=("Drawer_Cabinet", "Industrial_Table")):
     import FreeCAD as App
-    from . import project, lumber, guide, cutlist, i18n
+    from . import project, check, lumber, guide, cutlist, i18n
     if os.path.isdir(OUT):
         for name in examples:
             shutil.rmtree(os.path.join(OUT, name), ignore_errors=True)
@@ -67,7 +77,7 @@ def run(examples=("Drawer_Cabinet", "Industrial_Table")):
     ns = {}
     i18n.set_language("en")          # same results on every machine, whatever config/local.json says
     try:
-        _run_steps(examples, results, ns, project, lumber, guide, cutlist, i18n)
+        _run_steps(examples, results, ns, project, check, lumber, guide, cutlist, i18n)
     finally:
         i18n.set_language(None)
     for name in examples:
@@ -76,7 +86,7 @@ def run(examples=("Drawer_Cabinet", "Industrial_Table")):
     return _report(results, env)
 
 
-def _run_steps(examples, results, ns, project, lumber, guide, cutlist, i18n):
+def _run_steps(examples, results, ns, project, check, lumber, guide, cutlist, i18n):
     for name in examples:
         src = os.path.join(ROOT, "examples", name)
         dst = os.path.join(OUT, name)
@@ -86,6 +96,7 @@ def _run_steps(examples, results, ns, project, lumber, guide, cutlist, i18n):
         _step(results, f"{name}: load build.py", lambda: ns.__setitem__(name, _load(build_py)) or "ok")
         if name in ns:
             _step(results, f"{name}: build()", lambda: ns[name]["build"]())
+            _step(results, f"{name}: check", lambda: _model_check(project, check, name, dst))
             _step(results, f"{name}: deliverables()", lambda: json.loads(json.dumps(ns[name]["deliverables"](), default=str)))
     if "Industrial_Table" in ns:
         folder = os.path.join(OUT, "Industrial_Table")

@@ -123,6 +123,7 @@ CLAUDE.md                    instructions Claude Code follows
 .mcp.json                    FreeCAD MCP server
 setup/check.ps1, check.sh    read-only environment check
 scripts/furniture/           modelling library (runs inside FreeCAD's Python)
+tests/                       unit tests of the pure logic (pytest, no FreeCAD; run by CI)
 scripts/render.py            photo-style render (Blender)
 scripts/animate_assembly.py  assembly video (Blender)
 catalog/                     material catalogs per region

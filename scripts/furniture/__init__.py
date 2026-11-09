@@ -8,7 +8,7 @@ Project scripts (projects/<Name>/model/build.py) find the repository root on the
 """
 import os, json, importlib
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CATALOG_DIR = os.path.join(ROOT, "catalog")
@@ -41,7 +41,7 @@ def reload():
     """Reloads the package and every module (after editing the library or a git pull)."""
     import sys
     importlib.reload(sys.modules[__name__])
-    from . import i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest
-    for m in (i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest):
+    from . import core, i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest
+    for m in (core, i18n, project, check, bom, cutlist, lumber, guide, images, drawing, export, selftest):
         importlib.reload(m)
     return "furniture reloaded"

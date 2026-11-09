@@ -107,6 +107,48 @@ def plan(proj):
     return out
 
 
+# ------------------------------------------------------------------ summary
+def _summary_items(plan_):
+    """Summary page lines: ("row", cells, bold) | ("gap",) | ("note", text). No Qt, unit-tested."""
+    items = []
+    if plan_["sheets"]:
+        items.append(("row", T("sum_sheets"), True))
+        seen = {}
+        for sh in plan_["sheets"]:
+            seen.setdefault((sh["name"], sh["thk"]), []).append(sh)
+        for (n, t), shs in seen.items():
+            items.append(("row", (f"{n} {t:g} mm ({shs[0]['SL']}x{shs[0]['SW']})", len(shs), sum(len(c["pos"]) for c in shs),
+                                  " / ".join(pct(c["use"]) for c in shs)), False))
+        items.append(("gap",))
+    if plan_["bars"]:
+        items.append(("row", T("sum_bars"), True))
+        for gb in plan_["bars"]:
+            items.append(("row", (f"{gb['name']} {gb['section']}", len(gb["bars"]), sum(len(b) for b in gb["bars"]), pct(gb["use"])), False))
+        items.append(("gap",))
+    if plan_["solid"]:
+        items.append(("row", T("sum_solid"), True))
+        for it in plan_["solid"]:
+            items.append(("row", (f"{it['material_name']} - {', '.join(it['parts'])}", it["qty"],
+                                  f"{it['length']}x{it['width']}x{it['thk']:g}", ""), False))
+        items.append(("gap",))
+    notes = ([T("note_guillotine")] if plan_["sheets"] else []) + ["- " + a for a in plan_["warnings"]]
+    if notes:                                          # the guillotine note only applies to sheets
+        items += [("note", t) for t in [T("notes")] + notes]
+    return items
+
+
+def _summary_chunks(plan_, per_page=16):
+    """Splits the summary lines over as many pages as needed (about 16 line heights per page)."""
+    UNITS = {"row": 1.0, "gap": 0.5, "note": 0.75}     # height of each kind, in summary line heights
+    chunks, cur, used = [], [], 0.0
+    for it in _summary_items(plan_):
+        if used + UNITS[it[0]] > per_page and cur:
+            chunks.append(cur); cur, used = [], 0.0
+        cur.append(it); used += UNITS[it[0]]
+    chunks.append(cur)
+    return chunks
+
+
 # ------------------------------------------------------------------ PDF
 def pdf(plan_, path, title):
     from PySide import QtGui, QtCore
@@ -190,36 +232,7 @@ def pdf(plan_, path, title):
             p.drawText(QtCore.QRectF(R.left(), R.bottom() - R.height() * 0.08, R.width(), R.height() * 0.06), QtCore.Qt.AlignLeft, foot)
         return _b
 
-    # summary: a list of lines (table rows, gaps, notes), split over as many pages as needed
-    items = []
-    if plan_["sheets"]:
-        items.append(("row", T("sum_sheets"), True))
-        seen = {}
-        for sh in plan_["sheets"]:
-            seen.setdefault((sh["name"], sh["thk"]), []).append(sh)
-        for (n, t), shs in seen.items():
-            items.append(("row", (f"{n} {t:g} mm ({shs[0]['SL']}x{shs[0]['SW']})", len(shs), sum(len(c["pos"]) for c in shs),
-                                  " / ".join(pct(c["use"]) for c in shs)), False))
-        items.append(("gap",))
-    if plan_["bars"]:
-        items.append(("row", T("sum_bars"), True))
-        for gb in plan_["bars"]:
-            items.append(("row", (f"{gb['name']} {gb['section']}", len(gb["bars"]), sum(len(b) for b in gb["bars"]), pct(gb["use"])), False))
-        items.append(("gap",))
-    if plan_["solid"]:
-        items.append(("row", T("sum_solid"), True))
-        for it in plan_["solid"]:
-            items.append(("row", (f"{it['material_name']} - {', '.join(it['parts'])}", it["qty"],
-                                  f"{it['length']}x{it['width']}x{it['thk']:g}", ""), False))
-        items.append(("gap",))
-    items += [("note", t) for t in [T("notes"), T("note_guillotine")] + ["- " + a for a in plan_["warnings"]]]
-    UNITS = {"row": 1.0, "gap": 0.5, "note": 0.75}     # height of each kind, in summary line heights
-    chunks, cur, used = [], [], 0.0
-    for it in items:
-        if used + UNITS[it[0]] > 16 and cur:           # about 16 line heights fit on a page
-            chunks.append(cur); cur, used = [], 0.0
-        cur.append(it); used += UNITS[it[0]]
-    chunks.append(cur)
+    chunks = _summary_chunks(plan_)
 
     def body_summary(chunk):
         def _b(p, R):
