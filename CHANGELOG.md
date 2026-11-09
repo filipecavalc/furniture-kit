@@ -3,6 +3,28 @@
 All notable changes to this project. Versions follow [Semantic Versioning](https://semver.org/):
 a major version means existing `build.py` files, catalogs or assembly scripts may need changes.
 
+## [1.1.0] - unreleased
+
+No changes needed in existing `build.py` files, catalogs or `.assembly.json` files.
+
+### Added
+- Unit tests (pytest, `tests/`) for the logic that does not need FreeCAD: name and alias rules,
+  grain values, profile sections, sheet nesting (no overlaps, kerf kept, inside the sheet, grain
+  never rotated, oversized parts rejected), bar nesting (bar length and kerf) and the cut-list summary.
+- GitHub Actions workflow running the unit tests on Windows and macOS, Python 3.11 and 3.12.
+- `scripts/furniture/core.py`: the pure rules (`check_name`, `check_alias`, `check_grain`,
+  `parse_section`, `RESERVED`, `GRAINS`), importable without FreeCAD. `project` re-exports them, so
+  `project.check_name` etc. keep working.
+
+### Changed
+- Self-test: new `check` step after each example's `build()`; it fails when the model has
+  collisions or invalid parts (before, only an exception made a step fail).
+
+### Fixed
+- Cut list: the note "All sheet cuts run edge to edge (guillotine)" appeared on cut lists without
+  sheets (e.g. Industrial_Table, bars only). It is now added only when there are sheets, and the
+  "Notes:" heading only when there is a note.
+
 ## [1.0.0] - 2026-10-08
 
 First stable release.

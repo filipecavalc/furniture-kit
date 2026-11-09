@@ -42,7 +42,8 @@ repository (code, comments, docs) stay in English. Generated documents follow `c
 CLAUDE.md                this file            CLAUDE.local.md     user profile (gitignored)
 config/local.json        language, catalog (gitignored; example in config/example.json)
 catalog/<region>.json    materials, sheet/bar sizes, construction defaults (br.json = Brazil)
-scripts/furniture/       library (runs inside FreeCAD)
+scripts/furniture/       library (runs inside FreeCAD; core.py = pure rules, no FreeCAD)
+tests/                   unit tests, plain Python + pytest (see TESTING.md)
 scripts/render.py        render in Blender       scripts/animate_assembly.py   assembly video
 setup/check.ps1 / .sh    environment check    templates/project/  new project skeleton
 examples/                Drawer_Cabinet (panels, drawers, detailed drawings, animation)
@@ -106,7 +107,8 @@ selftest.run()                                     # builds the examples in proj
 ```
 
 Dims and positions accept numbers or expressions with the aliases (e.g. `"width - 2*thk"`).
-After changing the library run `furniture.reload()` (every `build.py` already does it).
+After changing the library run `furniture.reload()` (every `build.py` already does it), the unit
+tests (`uv run --no-project --with pytest python -m pytest`) and, for modelling changes, the self-test.
 
 ## Conventions
 

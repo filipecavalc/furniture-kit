@@ -25,6 +25,14 @@ Nothing is committed.
 
 ## Only want the quick checks?
 
+- Unit tests (no FreeCAD needed): the pure logic of the library (names, parameter aliases, profile
+  sections, sheet and bar nesting, cut-list summary) has pytest tests in `tests/`. From the kit folder:
+  ```bash
+  uv run --no-project --with pytest python -m pytest
+  ```
+  (or `python -m pip install pytest` in a virtual environment, then `python -m pytest`). The same
+  tests run on every push and pull request on GitHub Actions (Windows and macOS, Python 3.11 and 3.12;
+  `.github/workflows/tests.yml`). FreeCAD is not installed there, so the self-test below stays manual.
 - Environment: `bash setup/check.sh` (macOS/Linux) or
   `powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1` (Windows).
 - Library, inside FreeCAD (Python console or MCP):
@@ -32,7 +40,8 @@ Nothing is committed.
   import sys; KIT = "/path/to/furniture-kit"; sys.path.insert(0, KIT + "/scripts")
   import furniture; furniture.reload(); from furniture import selftest; print(selftest.run())
   ```
-  Report: `projects/_selftest/selftest.md`.
+  Report: `projects/_selftest/selftest.md`. A step fails on an error, and the `check` step after
+  each example's `build()` also fails when the model has collisions or invalid parts.
 
 ## Status by platform
 
