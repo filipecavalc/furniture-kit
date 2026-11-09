@@ -11,7 +11,11 @@ No changes needed in existing `build.py` files, catalogs or `.assembly.json` fil
 - Unit tests (pytest, `tests/`) for the logic that does not need FreeCAD: name and alias rules,
   grain values, profile sections, sheet nesting (no overlaps, kerf kept, inside the sheet, grain
   never rotated, oversized parts rejected), bar nesting (bar length and kerf) and the cut-list summary.
-- GitHub Actions workflow running the unit tests on Windows and macOS, Python 3.11 and 3.12.
+- Catalog tests: every `catalog/*.json` has the defaults and material fields the library and the
+  Blender scripts read, supplier sizes or `verify` always come with a `source`, and `name_<lang>`
+  matches a document language. `config/example.json` points to a catalog and a language.
+- GitHub Actions workflow running the unit and catalog tests on pull requests and pushes to `main`
+  (one job: Windows, Python 3.11, the version FreeCAD 1.1 bundles).
 - `scripts/furniture/core.py`: the pure rules (`check_name`, `check_alias`, `check_grain`,
   `parse_section`, `RESERVED`, `GRAINS`), importable without FreeCAD. `project` re-exports them, so
   `project.check_name` etc. keep working.

@@ -13,7 +13,9 @@ issue, paste the report and attach the zip. macOS on Intel and Linux reports are
 1. Copy `catalog/br.json` to `catalog/<country code>.json` and follow [catalog/README.md](catalog/README.md).
 2. Every size you have not confirmed with a supplier gets `"verify": true`, and every material a
    `"source"` (shop, maker's catalogue or link). Don't guess.
-3. Open a pull request saying where you are and which suppliers you checked.
+3. Run `uv run --no-project --with pytest python -m pytest tests/test_catalogs.py` (it also runs on the
+   pull request) and fix what it reports.
+4. Open a pull request saying where you are and which suppliers you checked.
 
 ## Document languages
 
