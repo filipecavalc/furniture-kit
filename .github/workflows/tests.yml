@@ -1,9 +1,12 @@
-# Unit tests of the library's pure logic (names, sections, nesting, cut-list summary).
-# FreeCAD is not installed here: the self-test inside FreeCAD stays a manual step (see TESTING.md).
+# Unit tests of the library's pure logic (names, sections, nesting, cut-list summary) and of the
+# material catalogs. The tested code has nothing OS-specific, so one job is enough: Windows, the
+# maintainer's main platform, and Python 3.11, the version bundled with FreeCAD 1.1 there.
+# This is not a platform test. FreeCAD, Blender and the self-test stay manual (see TESTING.md).
 name: tests
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -11,18 +14,12 @@ permissions:
 
 jobs:
   unit:
-    name: unit (${{ matrix.os }}, Python ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
-        python: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.11"
       - run: python -m pip install pytest
       - run: python -m pytest

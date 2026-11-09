@@ -26,13 +26,16 @@ Nothing is committed.
 ## Only want the quick checks?
 
 - Unit tests (no FreeCAD needed): the pure logic of the library (names, parameter aliases, profile
-  sections, sheet and bar nesting, cut-list summary) has pytest tests in `tests/`. From the kit folder:
+  sections, sheet and bar nesting, cut-list summary) and the material catalogs (fields the code reads,
+  a `source` for supplier data) have pytest tests in `tests/`. From the kit folder:
   ```bash
   uv run --no-project --with pytest python -m pytest
   ```
   (or `python -m pip install pytest` in a virtual environment, then `python -m pytest`). The same
-  tests run on every push and pull request on GitHub Actions (Windows and macOS, Python 3.11 and 3.12;
-  `.github/workflows/tests.yml`). FreeCAD is not installed there, so the self-test below stays manual.
+  tests run on GitHub Actions for every pull request and every push to `main`
+  (`.github/workflows/tests.yml`): one job, Windows with Python 3.11 (the version FreeCAD 1.1 bundles
+  on Windows). The tested code has nothing OS-specific, so this is not a platform test. FreeCAD is not
+  installed there, so the self-test below stays manual and is what the platform table reflects.
 - Environment: `bash setup/check.sh` (macOS/Linux) or
   `powershell -NoProfile -ExecutionPolicy Bypass -File setup/check.ps1` (Windows).
 - Library, inside FreeCAD (Python console or MCP):

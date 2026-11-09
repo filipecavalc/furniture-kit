@@ -11,7 +11,10 @@ One file per region (`br.json` = Brazil). The active catalog is set in `config/l
    The cut list prints a warning for these. Never guess supplier data.
 4. Set `"catalog": "<code>"` in `config/local.json`.
 
-Pull requests with new regional catalogs are welcome.
+Pull requests with new regional catalogs are welcome. `tests/test_catalogs.py` checks every catalog
+(required fields, a `source` for supplier sizes and `verify`, valid `name_<lang>` and render
+settings); run it with `uv run --no-project --with pytest python -m pytest tests/test_catalogs.py`.
+It also runs automatically on every pull request.
 
 ## Fields
 
